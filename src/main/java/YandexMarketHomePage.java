@@ -3,16 +3,15 @@ import com.codeborne.selenide.SelenideElement;
 import io.qameta.allure.Step;
 import models.YandexMarketCategories;
 import models.YandexMarketElectronicsSubItems;
-import org.openqa.selenium.By;
 
-import static com.codeborne.selenide.Selenide.$;
+import static com.codeborne.selenide.Selenide.$x;
 
 /**
  * PageObject Яндекс Маркета для главной страницы Яндекс Маркета
  *
  * @author MonomythConvergence/Михаил Гришин
  */
-public class YandexMarketHomePage extends YandexMarketBasePage {
+public class YandexMarketHomePage extends YandexMarketBasePage<YandexMarketHomePage> {
     /**
      * Конструктор страницы.
      */
@@ -23,29 +22,29 @@ public class YandexMarketHomePage extends YandexMarketBasePage {
     /**
      * Локаторы/selectors.
      */
-    protected final SelenideElement catalogueLargeTextButton = $(By.xpath("//button[contains(@class, 'ds-button') and .//span[text()='Каталог']]"));
-    protected final SelenideElement catalogueSmallIconButton = $(By.xpath("//button[contains(@class, 'ds-button') and .//svg]"));
-    protected final SelenideElement catalogueDialogueMenu = $(By.xpath("//div[contains(@id,'catalogEntrypoint')]"));
+    private final SelenideElement catalogueLargeTextButton = $x("//button[contains(@class, 'ds-button') and .//span[text()='Каталог']]");
+    private final SelenideElement catalogueSmallIconButton = $x("//button[contains(@class, 'ds-button') and .//svg]");
+    private final SelenideElement catalogueDialogueMenu = $x("//div[contains(@id,'catalogEntrypoint')]");
 
     /**
      * Открывает каталог по одной из двух вариантов кнопок (меняется динамично в зависимости от ширины экрана)
      */
-    protected void openCatalogue() {
+    public YandexMarketHomePage openCatalogue() {
         boolean buttonVisible =
                 catalogueLargeTextButton.is(Condition.visible) || catalogueSmallIconButton.is(Condition.visible);
 
         if (!buttonVisible) {
-            return;
+            return this;
         }
 
         if (catalogueLargeTextButton.isDisplayed()) {
             catalogueLargeTextButton.click();
-            return;
         }
 
         if (catalogueSmallIconButton.isDisplayed()) {
             catalogueSmallIconButton.click();
         }
+        return this;
     }
 
     /**
@@ -53,8 +52,9 @@ public class YandexMarketHomePage extends YandexMarketBasePage {
      *
      * @param category - искомая категория
      */
-    protected void moveCursorToCategory(YandexMarketCategories category) {
-        moveCursorTo(category.get());
+    protected YandexMarketHomePage moveCursorToCategory(YandexMarketCategories category) {
+        category.get().hover();
+        return this;
     }
 
     /**
@@ -67,7 +67,7 @@ public class YandexMarketHomePage extends YandexMarketBasePage {
     protected YandexMobilePhonesCategoryPage selectMobilePhonesFromCatalogue() {
         openCatalogue();
         moveCursorToCategory(YandexMarketCategories.ELECTRONICS);
-        click(YandexMarketElectronicsSubItems.MOBILEPHONES.get());
+        (YandexMarketElectronicsSubItems.MOBILEPHONES.get()).shouldBe(Condition.visible).click();
         return new YandexMobilePhonesCategoryPage();
     }
 

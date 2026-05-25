@@ -1,25 +1,23 @@
+import com.codeborne.selenide.ElementsCollection;
 import com.codeborne.selenide.Selenide;
 import com.codeborne.selenide.SelenideElement;
 import com.codeborne.selenide.WebDriverRunner;
 import io.qameta.allure.Step;
-import org.openqa.selenium.By;
-
-import java.util.List;
 
 import static com.codeborne.selenide.Condition.visible;
-import static com.codeborne.selenide.Selenide.*;
+import static com.codeborne.selenide.Selenide.$x;
 
 /**
  * Базовый абстрактный класс для PageObject Яндекс Маркета
  *
  * @author MonomythConvergence/Михаил Гришин
  */
-public abstract class YandexMarketBasePage {
+public abstract class YandexMarketBasePage<T> {
 
     /**
      * Локатор поля поиска в шапке всех страниц ЯМ.
      */
-    protected final SelenideElement headerSearch = $(By.xpath("//input[@id='header-search']"));
+    protected final SelenideElement headerSearch = $x("//input[@id='header-search']");
 
     /**
      * Конструктор
@@ -30,9 +28,10 @@ public abstract class YandexMarketBasePage {
     /**
      * Открывает указанный URL
      */
-    @Step("Открываем страницу по URL")
-    public void open(String url) {
+    @Step("Открываем страницу {url}")
+    public T open(String url) {
         Selenide.open(url);
+        return (T) this;
     }
 
     /**
@@ -47,7 +46,7 @@ public abstract class YandexMarketBasePage {
      * Проверяет, что страница загружена корректно.
      */
     @Step("Проверяем, что страница загружена корректно (URL содержит '{expectedPartialUrl}')")
-    public void isCorrectlyLoaded(String expectedPartialUrl, List<SelenideElement> elementChecklist) {
+    public T shouldBeLoaded(String expectedPartialUrl, ElementsCollection elementsToCheck) {
         String actualUrl = WebDriverRunner.url();
         if (!actualUrl.contains(expectedPartialUrl)) {
             throw new AssertionError(
@@ -56,53 +55,22 @@ public abstract class YandexMarketBasePage {
             );
         }
 
-        // Проверка видимости всех элементов из чек-листа
-        for (SelenideElement element : elementChecklist) {
-            element.shouldBe(visible);
-        }
+        elementsToCheck.forEach(el -> el.shouldBe(visible)); // Проверка видимости всех элементов из чек-листа
+        return (T) this;
     }
 
-    /**
-     * Вводит текст в элемент (с предварительной очисткой).
-     */
-    @Step("Вводим текст '{text}' в элемент")
-    protected void sendKeys(SelenideElement element, String text) {
-        element.shouldBe(visible).clear();
-        element.val(text);
-    }
-
-    /**
-     * Кликаем по элементу.
-     */
-    @Step("Кликаем по элементу")
-    protected void click(SelenideElement element) {
-        element.shouldBe(visible).click();
-    }
-
-    /**
-     * Наводим курсор на элемент.
-     */
-    @Step("Наводим курсор на элемент")
-    protected void moveCursorTo(SelenideElement element) {
-        actions().moveToElement(element).perform();
-    }
-
-    /**
-     * Прокручиваем страницу до элемента.
-     */
-    @Step("Прокручиваем страницу до элемента")
-    protected void scrollTo(SelenideElement element) {
-        element.scrollIntoView(true);
-    }
 
     /**
      * Ищем через поиск в шапке.
      */
     @Step("Ищем через поиск в шапке: '{query}'")
     protected YandexMarketSearchResultsPage searchViaHeaderBar(String query) {
-        click(headerSearch);
-        sendKeys(headerSearch, query);
-        headerSearch.pressEnter();
+        headerSearch.shouldBe(visible).click();
+
+        headerSearch
+                .shouldBe(visible)
+                .setValue(query)
+                .pressEnter();
 
         return new YandexMarketSearchResultsPage();
     }

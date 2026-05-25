@@ -1,38 +1,37 @@
 import com.codeborne.selenide.Condition;
+import com.codeborne.selenide.ElementsCollection;
 import com.codeborne.selenide.SelenideElement;
 import io.qameta.allure.Step;
 import org.openqa.selenium.By;
 import org.openqa.selenium.TimeoutException;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static com.codeborne.selenide.Condition.enabled;
 import static com.codeborne.selenide.Condition.exist;
-import static com.codeborne.selenide.Selenide.$;
-import static com.codeborne.selenide.Selenide.$$;
+import static com.codeborne.selenide.Selenide.*;
 
 
 /**
  * PageObject Яндекс Маркета для страницы категории "Мобильные телефоны".
  * В задании "Смартфоны" но это явно ошибка, так как такой категории (больше?) нет.
+ * В PO используются *статичный* селектор и String для проверки страницы так как PO рассчитан на конкретную категорию, а
+ * не как generic PO для любой категории каталога.
  *
  * @author MonomythConvergence/Михаил Гришин
  */
-public class YandexMobilePhonesCategoryPage extends YandexMarketBasePage {
-    /**
-     * Конструктор страницы категории "Мобильные телефоны".
-     */
-    protected YandexMobilePhonesCategoryPage() {
-        super();
-    }
+public class YandexMobilePhonesCategoryPage extends YandexMarketBasePage<YandexMobilePhonesCategoryPage> {
 
     /**
      * Элементы и селекторы
      */
-    protected final SelenideElement titleTextMobilePhone = $(By.xpath("//h1[@data-auto='title' and normalize-space(text())='Мобильные телефоны']"));
-    protected final SelenideElement loadingCurtain = $("div[data-auto='SerpStatic-loader']");
+    By titleTextMobilePhone = By.xpath("//h1[@data-auto='title' and normalize-space(text())='Мобильные телефоны']");
+    private  final SelenideElement loadingCurtain = $x("div[data-auto='SerpStatic-loader']");
     By searchPagerNextPage = By.xpath("//div[@data-zone-name='next']");
+
+    /**
+     * Константы вынесенные для читаемости
+     */
+    private static final int MAX_PAGINATION_ITERATIONS = 100;     //компромисс, чтобы избежать бесконечной подгрузки пустых страниц (частотный баг)
+    private static final int NEW_RESULTS_TIMEOUT_MS = 5000;      //таймаут ожидания подгрузки
 
     /**
      * Метод проверки корректной загрузки верной страницы
@@ -40,33 +39,35 @@ public class YandexMobilePhonesCategoryPage extends YandexMarketBasePage {
      * @throws TimeoutException если страница не прошла проверки
      */
     @Step("Проверяем корректную загрузку страницы категории Мобильные телефоны")
-    public void isCorrectlyLoadedCheck() {
-        List<SelenideElement> checklist = new ArrayList<>();
-        checklist.add(titleTextMobilePhone);
-        isCorrectlyLoaded("catalog--mobilnye-telefony", checklist);
+    public YandexMobilePhonesCategoryPage isCorrectlyLoadedCheck(){
+        ElementsCollection checklist = $$(titleTextMobilePhone);
+        return (YandexMobilePhonesCategoryPage) shouldBeLoaded("catalog--mobilnye-telefony", checklist);
     }
 
     /**
      * Отмечает чекбокс бренда по локатору
+     * TODO: Потенциальное улучшение - добавить разворот списка брендов и/или использовать ввод текста для поиска (чревато
+     * TODO: своей долей проблем - "Apple" вернёт больше чем один результат потенциальных фильтров)
      *
      * @param brandName String с названием бренда
      */
     @Step("Выбираем бренд по локатору")
-    public void clickBrandCheckbox(String brandName) {
+    public YandexMobilePhonesCategoryPage clickBrandCheckbox(String brandName) {
 
-        SelenideElement checkboxCandidateOne = $(By.xpath(
-                "//label[@role='checkbox' and .//span[contains(text(), '" + brandName + "')]]"
-        ));
+        SelenideElement checkboxCandidateOne = $x("//label[@role='checkbox' and .//span[contains(text(), '"
+                + brandName + "')]]");
 
-        SelenideElement checkboxCandidateTwo = $(By.xpath("//div[@data-zone-name='filterValue']//a[@role='button' and .//span[contains(text(), '" + brandName + "')]]"));
+        SelenideElement checkboxCandidateTwo = $x("//div[@data-zone-name='filterValue']//a[@role='button' " +
+                "and .//span[contains(text(), '" + brandName + "')]]");
         //Новый дизайн, периодически тестируется, возможно от него откажутся в результате AB тестов
 
         SelenideElement checkbox = checkboxCandidateOne.exists() ? checkboxCandidateOne : checkboxCandidateTwo;
-        checkbox.shouldBe(Condition.enabled);
-        click(checkbox);
+        checkbox.shouldBe(Condition.enabled).click();
 
-        SelenideElement finalBrandFilterIcon = $(By.xpath("//div[@data-zone-name='filter' and contains(@data-zone-data, '\"filterId\":\"7893318\"')]//div[contains(@class,'ds-chip') and .//span[text()='" + brandName + "']]"));
-        finalBrandFilterIcon.should(exist); //Этот же элемент с текстом "Бренд" доступен сразу после нажатия на фильтр, но меняет текст на название бренда только после загрузки результатов. Привязать к ширме загрузки не вышло, использую как замену.
+        $x("//div[@data-zone-name='filter' and contains(@data-zone-data, '\"filterId\":\"7893318\"')]//div[contains(@class,'ds-chip') " +
+                "and .//span[text()='" + brandName + "']]").should(exist);
+        //Этот же элемент с текстом "Бренд" доступен сразу после нажатия на фильтр, но меняет текст на название бренда только после загрузки результатов. Привязать к ширме загрузки не вышло, использую как замену.
+        return this;
     }
 
 
@@ -78,7 +79,7 @@ public class YandexMobilePhonesCategoryPage extends YandexMarketBasePage {
      */
     @Step("Проверяем применение фильтров по ключевому слову")
     private boolean checkFilterApplication(String keyword) {
-        List<SelenideElement> realResults = $$(By.xpath("//*[@data-zone-name='productSnippet' and not(ancestor::*[@data-zone-name='madvIncut']) and normalize-space()]"));
+        ElementsCollection realResults = $$x("//*[@data-zone-name='productSnippet' and not(ancestor::*[@data-zone-name='madvIncut']) and normalize-space()]");
 
         return realResults
                 .stream()
@@ -95,7 +96,6 @@ public class YandexMobilePhonesCategoryPage extends YandexMarketBasePage {
 
     /**
      * Проверяет применение фильтров по ключевому слову
-     * <p>
      * Метод прокрутки результатов: Нажимает на кнопку следующей страницы в панели навигации пока кнопка не пропадёт
      * или пока после нажатия кнопки не подгрузится новых результатов.
      * Во втором случае exception не бросается - у Яндекса стабильно "заедается" страницы
@@ -109,16 +109,15 @@ public class YandexMobilePhonesCategoryPage extends YandexMarketBasePage {
         boolean check = true;
         int previousResultCount = 0;
         boolean finalPageReached = false;
-        int maxIterations = 100; // защита от бесконечного цикла
         int iteration = 0;
         String normalizedKeyword = keyword.trim().toLowerCase();
 
         $(searchPagerNextPage).shouldBe(enabled);
 
-        while (iteration < maxIterations) {
+        while (iteration < MAX_PAGINATION_ITERATIONS) { //защита от бесконечного цикла т.к. ЯМ иногда грузит пустые страницы
             iteration++;
 
-            List<SelenideElement> nextButtons = $$(searchPagerNextPage);
+            ElementsCollection nextButtons = $$(searchPagerNextPage);
             finalPageReached = nextButtons.stream().noneMatch(SelenideElement::isEnabled);
 
             if (finalPageReached) {
@@ -148,14 +147,16 @@ public class YandexMobilePhonesCategoryPage extends YandexMarketBasePage {
      * @return возвращает Boolean
      */
     private boolean checkForNewResults(int oldCount) {
-        long timeout = System.currentTimeMillis() + 5000L; //10 секунд
+        long timeout = System.currentTimeMillis() +NEW_RESULTS_TIMEOUT_MS; //5 секунд
 
         while (System.currentTimeMillis() < timeout) {
             int now = $$("[data-zone-name='productSnippet']").size();
             if (now > oldCount) {
                 return true;
             }
-            //т.к. Sleep запрещён и любые wait кидают exception то мониторим в реальном времени...
+            // т.к. Sleep запрещён и любые wait кидают exception то мониторим в реальном времени...
+            // Thread.yield() используется чтобы снизить нагрузку на CPU.
+            Thread.yield();
         }
         return false;
     }
