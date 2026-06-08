@@ -9,7 +9,7 @@ import static com.codeborne.selenide.WebDriverRunner.getWebDriver;
 
 /**
  * Базовый абстрактный класс для тестовых классов.
- * Содержит before/after для всех тестов (Selenide-версия).
+ * Содержит before/after для всех тестов
  *
  * @author MonomythConvergence/Михаил Гришин
  */
@@ -21,10 +21,10 @@ public abstract class BaseTest {
     @BeforeEach
     public void before() {
         Configuration.browser = "chrome";
-        Configuration.browserSize = "1920x1080"; //todo delete?
+        Configuration.baseUrl = TestConfig.getProperty("base.url");
+        Configuration.browserSize = "1920x1080";
         Configuration.pageLoadTimeout = 15000;
-        Configuration.timeout = 20000;//как я понимаю требования к драйверу в env больше не применимо к задаче несмотря
-        // на "Требования: Все что и на предыдущее задание" т.к. Selenide скачает сам.
+        Configuration.timeout = 20000;
 
         SelenideLogger.addListener("AllureSelenide",
                 new CustomAllureSelenide());

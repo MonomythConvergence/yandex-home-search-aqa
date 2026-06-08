@@ -1,4 +1,6 @@
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
 /**
@@ -9,12 +11,13 @@ import java.util.Properties;
  */
 public class TestConfig {
     private static final Properties PROPERTIES = new Properties();
-    static { //содержит try/catch, но не является частью тестовой логики
-        try (InputStream input = TestConfig.class.getClassLoader().getResourceAsStream("config.properties")) {
+    static {
+        try (InputStream input = TestConfig.class.getClassLoader().getResourceAsStream("config.properties");
+             InputStreamReader reader = new InputStreamReader(input, StandardCharsets.UTF_8)) { //для обработки кириллицы
             if (input == null) {
                 throw new IllegalStateException("Не найден config.properties в resources");
             }
-            PROPERTIES.load(input);
+            PROPERTIES.load(reader);
         } catch (Exception e) {
             throw new RuntimeException("Не удалось загрузить config.properties", e);
         }
